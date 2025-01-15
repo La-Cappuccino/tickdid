@@ -14,7 +14,14 @@ import {
   ArrowUpIcon,
   CheckCircledIcon,
   TargetIcon,
+  PlusIcon,
 } from "@radix-ui/react-icons"
+
+interface FilterItem {
+  id: TaskView;
+  name: string;
+  count: number;
+}
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -24,12 +31,12 @@ export default function Home() {
   const setView = store.setView
   const filteredTasks = store.getFilteredTasks()
 
-  const filters = [
+  const filters: readonly FilterItem[] = [
     { id: "all", name: "All Tasks", count: tasks.filter(t => !t.completed).length },
     { id: "today", name: "Today", count: tasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString() && !t.completed).length },
     { id: "upcoming", name: "Upcoming", count: tasks.filter(t => t.dueDate && new Date(t.dueDate) > new Date() && !t.completed).length },
     { id: "completed", name: "Completed", count: tasks.filter(t => t.completed).length },
-  ]
+  ] as const;
 
   const handleViewChange = (view: TaskView) => {
     setView(view)
@@ -65,7 +72,7 @@ export default function Home() {
   return (
     <div className="h-screen flex bg-[#FAFAFA]">
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-in-out`}>
+      <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`}>
         {/* Sidebar Header */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200">
           <button
@@ -74,22 +81,30 @@ export default function Home() {
           >
             <HamburgerMenuIcon className="w-5 h-5 text-gray-600" />
           </button>
-          {sidebarOpen && (
-            <div className="flex items-center">
-              <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-violet-600">TD</span>
-              </div>
+          <div className={`flex items-center transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
+              <span className="text-sm font-medium text-violet-600">TD</span>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Quick Add */}
-        <div className="p-4">
-          <TaskDialog />
+        <div className={`p-4 ${!sidebarOpen && "flex justify-center"}`}>
+          {sidebarOpen ? (
+            <TaskDialog />
+          ) : (
+            <Button
+              size="icon"
+              className="rounded-xl w-8 h-8 p-0"
+              onClick={() => setSidebarOpen(true)}
+            >
+              <PlusIcon className="w-4 h-4" />
+            </Button>
+          )}
         </div>
 
         {/* Navigation */}
-        <div className="px-3">
+        <div className="px-3 flex-1 overflow-y-auto">
           {filters.map(filter => (
             <button
               key={filter.id}
@@ -102,11 +117,27 @@ export default function Home() {
                 transition-all duration-150
               `}
             >
-              <span className="ml-3 text-sm">{filter.name}</span>
-              {filter.count > 0 && (
-                <span className="ml-auto text-xs bg-gray-100 px-2 py-1 rounded-full">
-                  {filter.count}
-                </span>
+              {!sidebarOpen ? (
+                <div className="relative flex items-center justify-center w-full">
+                  <span className="text-sm font-medium">{filter.name[0]}</span>
+                  {filter.count > 0 && (
+                    <div className="absolute -top-1 -right-1">
+                      <span className="flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <span className="text-sm">{filter.name}</span>
+                  {filter.count > 0 && (
+                    <span className="ml-auto text-xs bg-gray-100 px-2 py-1 rounded-full">
+                      {filter.count}
+                    </span>
+                  )}
+                </>
               )}
             </button>
           ))}
