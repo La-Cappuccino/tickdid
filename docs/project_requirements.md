@@ -952,3 +952,188 @@ Incorporating AI features can significantly enhance user experience and streamli
    - AI model fallback
    - User data restoration
    - Workspace recovery 
+
+## 14. UI/UX Enhancement Guidelines for TickDid
+
+### Core Interaction Patterns
+
+1. **Task Interactions**
+```typescript
+// Essential interactive classes for task items
+const taskInteractions = {
+  hover: "hover:scale-102 hover:shadow-md transition-all duration-300",
+  active: "active:scale-98 transition-transform",
+  focus: "focus:ring-2 focus:ring-primary-500 focus:outline-none",
+  loading: "animate-pulse bg-gray-100",
+  complete: "opacity-75 line-through transition-opacity",
+  priority: {
+    p1: "border-l-4 border-red-500 transition-colors",
+    p2: "border-l-4 border-orange-500 transition-colors",
+    p3: "border-l-4 border-yellow-500 transition-colors",
+    p4: "border-l-4 border-green-500 transition-colors"
+  }
+}
+```
+
+2. **Animation Guidelines**
+```typescript
+// Core transition settings
+const transitions = {
+  duration: {
+    fast: 150,    // Quick feedback
+    normal: 300,  // Standard transitions
+    slow: 500     // Emphasis animations
+  },
+  timing: "cubic-bezier(0.4, 0, 0.2, 1)", // Smooth easing
+  reducedMotion: "prefer-reduced-motion: reduce"
+}
+```
+
+### Component-Specific Patterns
+
+1. **Task Cards**
+   - Subtle hover lift with shadow expansion
+   - Priority indicator color transitions
+   - Completion state animations
+   - Smooth height transitions for expanding details
+   ```typescript
+   const taskCardClasses = {
+     container: "transform transition-all duration-300",
+     hover: "hover:-translate-y-1 hover:shadow-lg",
+     expanding: "transition-[height] duration-300 ease-in-out",
+     complete: "animate-completion-slide"
+   }
+   ```
+
+2. **Task Creation Dialog**
+   - Form field focus animations
+   - Validation feedback transitions
+   - Submit button loading states
+   - Success/error animations
+   ```typescript
+   const dialogAnimations = {
+     entry: "animate-dialog-entry duration-300",
+     exit: "animate-dialog-exit duration-200",
+     overlay: "animate-overlay-fade duration-300",
+     success: "animate-success-bounce bg-green-500"
+   }
+   ```
+
+3. **Priority Selection**
+   - Color transition feedback
+   - Selection highlight animations
+   - Hover state previews
+   ```typescript
+   const prioritySelectClasses = {
+     option: "transition-colors duration-200",
+     selected: "scale-105 ring-2 ring-primary",
+     preview: "hover:bg-opacity-20"
+   }
+   ```
+
+### Task-Specific Interactions
+
+1. **Task Status Changes**
+   - Completion checkbox animations
+   ```typescript
+   const statusAnimations = {
+     complete: "animate-checkmark-draw duration-300",
+     undo: "animate-fade-out duration-200"
+   }
+   ```
+
+2. **Task Filtering & Sorting**
+   - List reorder animations
+   - Filter transition effects
+   ```typescript
+   const listAnimations = {
+     reorder: "transition-transform duration-300",
+     filter: "animate-fade-scale duration-200",
+     sort: "animate-slide-fade duration-300"
+   }
+   ```
+
+3. **Due Date Selection**
+   - Calendar hover effects
+   - Date selection feedback
+   ```typescript
+   const datePickerClasses = {
+     day: "hover:bg-primary/10 transition-colors",
+     selected: "animate-pop bg-primary",
+     today: "ring-2 ring-primary/30"
+   }
+   ```
+
+### Performance Optimizations
+
+1. **Animation Performance**
+   ```typescript
+   // Performance-focused class combinations
+   const performanceClasses = {
+     hardware: "transform-gpu will-change-transform",
+     efficient: "will-change-opacity will-change-transform",
+     reduced: "@media(prefers-reduced-motion: reduce) { transition: none; }"
+   }
+   ```
+
+2. **Loading States**
+   ```typescript
+   const loadingStates = {
+     skeleton: "animate-pulse bg-gray-200",
+     spinner: "animate-spin border-t-2 border-primary",
+     progressive: "animate-fade-in transition-opacity"
+   }
+   ```
+
+### Accessibility Considerations
+
+1. **Motion Sensitivity**
+   ```typescript
+   const a11yPatterns = {
+     reducedMotion: {
+       transform: "motion-safe:transform motion-reduce:translate-0",
+       animation: "motion-safe:animate-spin motion-reduce:opacity-100"
+     }
+   }
+   ```
+
+2. **Focus Management**
+   ```typescript
+   const focusPatterns = {
+     outline: "focus-visible:ring-2 focus-visible:ring-offset-2",
+     navigation: "focus:outline-none focus-visible:ring-2",
+     interactive: "focus-within:ring-2 ring-primary/50"
+   }
+   ```
+
+### Implementation Best Practices
+
+1. **State Transitions**
+   - Use consistent timing functions
+   - Implement proper loading states
+   - Handle error states gracefully
+   - Provide visual feedback for all actions
+
+2. **Animation Hierarchy**
+   - Primary actions: 300ms, pronounced
+   - Secondary actions: 200ms, subtle
+   - Micro-interactions: 150ms, minimal
+
+3. **Performance Guidelines**
+   - Use `transform` and `opacity` for animations
+   - Implement virtual scrolling for long lists
+   - Lazy load components and animations
+   - Monitor frame rates and jank
+
+4. **Accessibility Rules**
+   - Support keyboard navigation
+   - Provide ARIA labels
+   - Respect reduced motion preferences
+   - Ensure sufficient color contrast
+
+This guide ensures:
+1. Consistent and professional interactions
+2. Task-focused animation patterns
+3. Performance-optimized UI
+4. Accessible design
+5. Modern user experience 

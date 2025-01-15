@@ -1,101 +1,175 @@
-import Image from "next/image";
+"use client"
+
+import { useState } from "react"
+import { useTaskStore, type Task, type TaskView } from "@/lib/store/task-store"
+import { TaskDialog } from "@/components/ui/task-dialog"
+import { TaskCard } from "@/components/task-card"
+import { Button } from "@/components/ui/button"
+import {
+  HamburgerMenuIcon,
+  MagnifyingGlassIcon,
+  BellIcon,
+  LayoutIcon,
+  ClockIcon,
+  ArrowUpIcon,
+  CheckCircledIcon,
+  TargetIcon,
+} from "@radix-ui/react-icons"
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const store = useTaskStore()
+  const tasks = store.tasks
+  const currentView = store.currentView
+  const setView = store.setView
+  const filteredTasks = store.getFilteredTasks()
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const filters = [
+    { id: "all", name: "All Tasks", count: tasks.filter(t => !t.completed).length },
+    { id: "today", name: "Today", count: tasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString() && !t.completed).length },
+    { id: "upcoming", name: "Upcoming", count: tasks.filter(t => t.dueDate && new Date(t.dueDate) > new Date() && !t.completed).length },
+    { id: "completed", name: "Completed", count: tasks.filter(t => t.completed).length },
+  ]
+
+  const handleViewChange = (view: TaskView) => {
+    setView(view)
+  }
+
+  const stats = [
+    {
+      title: "Tasks Due",
+      value: tasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString()).length,
+      icon: ClockIcon,
+      gradient: "from-violet-500 to-violet-600"
+    },
+    {
+      title: "High Priority",
+      value: tasks.filter(t => t.priority === "p1" && !t.completed).length,
+      icon: ArrowUpIcon,
+      gradient: "from-blue-500 to-blue-600"
+    },
+    {
+      title: "Completed Today",
+      value: tasks.filter(t => t.completed && new Date(t.updatedAt).toDateString() === new Date().toDateString()).length,
+      icon: CheckCircledIcon,
+      gradient: "from-emerald-500 to-emerald-600"
+    },
+    {
+      title: "Weekly Progress",
+      value: "85%",
+      icon: TargetIcon,
+      gradient: "from-amber-500 to-amber-600"
+    }
+  ]
+
+  return (
+    <div className="h-screen flex bg-[#FAFAFA]">
+      {/* Sidebar */}
+      <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-in-out`}>
+        {/* Sidebar Header */}
+        <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <HamburgerMenuIcon className="w-5 h-5 text-gray-600" />
+          </button>
+          {sidebarOpen && (
+            <div className="flex items-center">
+              <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
+                <span className="text-sm font-medium text-violet-600">TD</span>
+              </div>
+            </div>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Quick Add */}
+        <div className="p-4">
+          <TaskDialog />
+        </div>
+
+        {/* Navigation */}
+        <div className="px-3">
+          {filters.map(filter => (
+            <button
+              key={filter.id}
+              onClick={() => handleViewChange(filter.id as TaskView)}
+              className={`
+                w-full flex items-center px-3 h-10 rounded-xl mb-1
+                ${currentView === filter.id 
+                  ? "bg-violet-50 text-violet-600" 
+                  : "hover:bg-gray-100 text-gray-700"}
+                transition-all duration-150
+              `}
+            >
+              <span className="ml-3 text-sm">{filter.name}</span>
+              {filter.count > 0 && (
+                <span className="ml-auto text-xs bg-gray-100 px-2 py-1 rounded-full">
+                  {filter.count}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200">
+          <div className="flex items-center">
+            <h1 className="text-xl font-semibold text-gray-900">
+              {filters.find(f => f.id === currentView)?.name}
+            </h1>
+            <span className="ml-3 text-sm text-gray-500">
+              {filteredTasks.length} tasks
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button variant="ghost" size="icon" className="rounded-xl">
+              <LayoutIcon className="w-5 h-5 text-gray-600" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-xl">
+              <MagnifyingGlassIcon className="w-5 h-5 text-gray-600" />
+            </Button>
+            <Button variant="ghost" size="icon" className="rounded-xl">
+              <BellIcon className="w-5 h-5 text-gray-600" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Tiles */}
+        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className={`bg-gradient-to-br ${stat.gradient} rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="bg-white/20 p-2 rounded-lg">
+                  <stat.icon className="w-5 h-5" />
+                </div>
+                <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full">
+                  {stat.title}
+                </span>
+              </div>
+              <div className="mt-3">
+                <h3 className="text-2xl font-bold">{stat.value}</h3>
+                <p className="text-sm text-white/80">{stat.title}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Task List */}
+        <div className="px-6 flex-1 overflow-y-auto">
+          <div className="space-y-4 pb-6">
+            {filteredTasks.map((task: Task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
-  );
+  )
 }
