@@ -16,11 +16,12 @@ export interface Tag {
 export interface Task {
   id: string
   title: string
-  description: string
+  description?: string
   completed: boolean
   createdAt: Date
-  updatedAt: Date
+  updatedAt?: Date
   dueDate?: Date
+  endDate?: Date
   priority: Priority
   tags?: Tag[]
 }

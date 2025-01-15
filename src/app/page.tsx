@@ -16,6 +16,12 @@ import {
   TargetIcon,
   PlusIcon,
 } from "@radix-ui/react-icons"
+import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
+import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dialog"
+import { isToday, isAfter, format, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth } from "date-fns"
+import { cn } from "@/lib/utils"
+import { TagFilter } from "@/components/ui/tag-filter"
+import { CalendarView } from "@/components/calendar-view"
 
 interface FilterItem {
   id: TaskView;
@@ -25,27 +31,51 @@ interface FilterItem {
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const store = useTaskStore()
-  const tasks = store.tasks
-  const currentView = store.currentView
-  const setView = store.setView
-  const filteredTasks = store.getFilteredTasks()
+  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+  const [selectedView, setSelectedView] = useState<TaskView>("all")
+  const tasks = useTaskStore((state) => state.tasks)
+  const selectedTags = useTaskStore((state) => state.selectedTags)
+  const [currentLayout, setCurrentLayout] = useState<"list" | "calendar">("list")
 
-  const filters: readonly FilterItem[] = [
+  // Add keyboard shortcuts
+  useKeyboardShortcuts({
+    onNewTask: () => setTaskDialogOpen(true),
+    onToggleSidebar: () => setSidebarOpen(!sidebarOpen),
+  })
+
+  const filters: FilterItem[] = [
     { id: "all", name: "All Tasks", count: tasks.filter(t => !t.completed).length },
-    { id: "today", name: "Today", count: tasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString() && !t.completed).length },
-    { id: "upcoming", name: "Upcoming", count: tasks.filter(t => t.dueDate && new Date(t.dueDate) > new Date() && !t.completed).length },
+    { id: "today", name: "Today", count: tasks.filter(t => !t.completed && t.dueDate && isToday(t.dueDate)).length },
+    { id: "upcoming", name: "Upcoming", count: tasks.filter(t => !t.completed && t.dueDate && isAfter(t.dueDate, new Date())).length },
     { id: "completed", name: "Completed", count: tasks.filter(t => t.completed).length },
-  ] as const;
+  ]
 
-  const handleViewChange = (view: TaskView) => {
-    setView(view)
-  }
+  const filteredTasks = tasks.filter(task => {
+    // First filter by view
+    const matchesView = (() => {
+      switch (selectedView) {
+        case "today":
+          return !task.completed && task.dueDate && isToday(task.dueDate)
+        case "upcoming":
+          return !task.completed && task.dueDate && isAfter(task.dueDate, new Date())
+        case "completed":
+          return task.completed
+        default:
+          return !task.completed
+      }
+    })()
+
+    // Then filter by selected tags
+    const matchesTags = selectedTags.length === 0 || 
+      task.tags?.some(tag => selectedTags.includes(tag.id))
+
+    return matchesView && matchesTags
+  })
 
   const stats = [
     {
       title: "Tasks Due",
-      value: tasks.filter(t => t.dueDate && new Date(t.dueDate).toDateString() === new Date().toDateString()).length,
+      value: tasks.filter(t => t.dueDate && isToday(t.dueDate)).length,
       icon: ClockIcon,
       gradient: "from-violet-500 to-violet-600"
     },
@@ -57,13 +87,13 @@ export default function Home() {
     },
     {
       title: "Completed Today",
-      value: tasks.filter(t => t.completed && new Date(t.updatedAt).toDateString() === new Date().toDateString()).length,
+      value: tasks.filter(t => t.completed && t.updatedAt && isToday(new Date(t.updatedAt))).length,
       icon: CheckCircledIcon,
       gradient: "from-emerald-500 to-emerald-600"
     },
     {
       title: "Weekly Progress",
-      value: "85%",
+      value: `${Math.round((tasks.filter(t => t.completed).length / Math.max(tasks.length, 1)) * 100)}%`,
       icon: TargetIcon,
       gradient: "from-amber-500 to-amber-600"
     }
@@ -81,22 +111,23 @@ export default function Home() {
           >
             <HamburgerMenuIcon className="w-5 h-5 text-gray-600" />
           </button>
-          <div className={`flex items-center transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
+          <div className={`flex items-center gap-2 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
             <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
               <span className="text-sm font-medium text-violet-600">TD</span>
             </div>
+            <KeyboardShortcutsDialog />
           </div>
         </div>
 
         {/* Quick Add */}
         <div className={`p-4 ${!sidebarOpen && "flex justify-center"}`}>
           {sidebarOpen ? (
-            <TaskDialog />
+            <TaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} />
           ) : (
             <Button
               size="icon"
               className="rounded-xl w-8 h-8 p-0"
-              onClick={() => setSidebarOpen(true)}
+              onClick={() => setTaskDialogOpen(true)}
             >
               <PlusIcon className="w-4 h-4" />
             </Button>
@@ -104,102 +135,173 @@ export default function Home() {
         </div>
 
         {/* Navigation */}
-        <div className="px-3 flex-1 overflow-y-auto">
-          {filters.map(filter => (
+        <nav className="flex-1 overflow-y-auto p-2">
+          {/* Mini Calendar */}
+          <div className={cn(
+            "mb-4 transition-all duration-300",
+            !sidebarOpen && "hidden"
+          )}>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="text-sm font-medium text-gray-600 mb-2">
+                {format(new Date(), "MMMM yyyy")}
+              </div>
+              <div className="grid grid-cols-7 gap-1 text-center">
+                {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
+                  <div key={day} className="text-xs text-gray-400">
+                    {day}
+                  </div>
+                ))}
+                {eachDayOfInterval({
+                  start: startOfMonth(new Date()),
+                  end: endOfMonth(new Date())
+                }).map((day) => {
+                  const hasTask = tasks.some(
+                    task => task.dueDate && isSameDay(new Date(task.dueDate), day)
+                  )
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={cn(
+                        "text-xs aspect-square flex items-center justify-center rounded",
+                        isToday(day) && "bg-violet-100 text-violet-600 font-medium",
+                        hasTask && !isToday(day) && "bg-violet-50 text-violet-600",
+                        !isSameMonth(day, new Date()) && "text-gray-300"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {filters.map((filter) => (
             <button
               key={filter.id}
-              onClick={() => handleViewChange(filter.id as TaskView)}
-              className={`
-                w-full flex items-center px-3 h-10 rounded-xl mb-1
-                ${currentView === filter.id 
-                  ? "bg-violet-50 text-violet-600" 
-                  : "hover:bg-gray-100 text-gray-700"}
-                transition-all duration-150
-              `}
+              onClick={() => setSelectedView(filter.id)}
+              className={cn(
+                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
+                "transition-colors duration-300",
+                selectedView === filter.id
+                  ? "bg-violet-50 text-violet-600"
+                  : "text-gray-600 hover:bg-gray-50"
+              )}
             >
-              {!sidebarOpen ? (
-                <div className="relative flex items-center justify-center w-full">
-                  <span className="text-sm font-medium">{filter.name[0]}</span>
-                  {filter.count > 0 && (
-                    <div className="absolute -top-1 -right-1">
-                      <span className="flex h-3 w-3">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-violet-500"></span>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              ) : (
+              {sidebarOpen ? (
                 <>
-                  <span className="text-sm">{filter.name}</span>
-                  {filter.count > 0 && (
-                    <span className="ml-auto text-xs bg-gray-100 px-2 py-1 rounded-full">
-                      {filter.count}
-                    </span>
-                  )}
+                  <span className="flex-1 text-left">{filter.name}</span>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white">
+                    {filter.count}
+                  </span>
                 </>
+              ) : (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white">
+                  {filter.count}
+                </span>
               )}
             </button>
           ))}
-        </div>
+        </nav>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="h-14 flex items-center justify-between px-6 bg-white border-b border-gray-200">
-          <div className="flex items-center">
-            <h1 className="text-xl font-semibold text-gray-900">
-              {filters.find(f => f.id === currentView)?.name}
+        <header className="h-14 border-b border-gray-200 bg-white px-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-gray-900">
+              {filters.find(f => f.id === selectedView)?.name}
             </h1>
-            <span className="ml-3 text-sm text-gray-500">
+            <span className="text-sm text-gray-500">
               {filteredTasks.length} tasks
             </span>
           </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <LayoutIcon className="w-5 h-5 text-gray-600" />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "h-8 w-8 rounded-lg",
+                "hover:bg-gray-100",
+                "transition-colors duration-300",
+                currentLayout === "calendar" && "text-violet-600 bg-violet-50 hover:bg-violet-100"
+              )}
+              onClick={() => setCurrentLayout(currentLayout === "list" ? "calendar" : "list")}
+            >
+              <LayoutIcon className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <MagnifyingGlassIcon className="w-5 h-5 text-gray-600" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg hover:bg-gray-100"
+            >
+              <MagnifyingGlassIcon className="h-4 w-4 text-gray-500" />
             </Button>
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <BellIcon className="w-5 h-5 text-gray-600" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-lg hover:bg-gray-100"
+            >
+              <BellIcon className="h-4 w-4 text-gray-500" />
             </Button>
           </div>
-        </div>
+        </header>
 
-        {/* Stats Tiles */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
-            <div
-              key={index}
-              className={`bg-gradient-to-br ${stat.gradient} rounded-xl p-4 text-white shadow-lg hover:shadow-xl transition-all duration-300`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="bg-white/20 p-2 rounded-lg">
-                  <stat.icon className="w-5 h-5" />
+        {currentLayout === "list" ? (
+          <>
+            {/* Stats Tiles */}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {stats.map((stat, index) => (
+                <div
+                  key={index}
+                  className={cn(
+                    "bg-gradient-to-br rounded-xl p-4 text-white shadow-sm",
+                    "hover:shadow-md hover:-translate-y-0.5",
+                    "transition-all duration-300",
+                    stat.gradient
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <stat.icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full">
+                      {stat.title}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <h3 className="text-2xl font-bold">{stat.value}</h3>
+                    <p className="text-sm text-white/80">{stat.title}</p>
+                  </div>
                 </div>
-                <span className="text-xs font-medium bg-white/20 px-2 py-1 rounded-full">
-                  {stat.title}
-                </span>
-              </div>
-              <div className="mt-3">
-                <h3 className="text-2xl font-bold">{stat.value}</h3>
-                <p className="text-sm text-white/80">{stat.title}</p>
+              ))}
+            </div>
+
+            {/* Task List */}
+            <div className="flex-1 overflow-y-auto px-6 pb-6">
+              <div className="max-w-3xl mx-auto">
+                <TagFilter />
+                <div className="space-y-4">
+                  {filteredTasks.map((task) => (
+                    <TaskCard key={task.id} task={task} />
+                  ))}
+                  {filteredTasks.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500">No tasks found</p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Task List */}
-        <div className="px-6 flex-1 overflow-y-auto">
-          <div className="space-y-4 pb-6">
-            {filteredTasks.map((task: Task) => (
-              <TaskCard key={task.id} task={task} />
-            ))}
+          </>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-6">
+            <div className="max-w-5xl mx-auto">
+              <CalendarView tasks={filteredTasks} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )

@@ -40,6 +40,20 @@ const priorityBgColors = {
   p4: "bg-blue-50",
 }
 
+const priorityBorderColors = {
+  p1: "border-l-4 border-l-red-500",
+  p2: "border-l-4 border-l-orange-500",
+  p3: "border-l-4 border-l-yellow-500",
+  p4: "border-l-4 border-l-blue-500",
+}
+
+const priorityLabels = {
+  p1: "Urgent",
+  p2: "High",
+  p3: "Medium",
+  p4: "Low",
+}
+
 export function TaskCard({ task }: TaskCardProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [editedTitle, setEditedTitle] = useState(task.title)
@@ -150,24 +164,34 @@ export function TaskCard({ task }: TaskCardProps) {
   }
 
   return (
-    <div className={cn(
-      "p-4 rounded-xl border bg-white shadow-sm hover:shadow-md transition-all duration-200",
-      task.completed && "bg-gray-50"
-    )}>
+    <div 
+      className={cn(
+        "group p-4 rounded-xl border bg-white shadow-sm",
+        "hover:-translate-y-1 hover:shadow-md active:translate-y-0 active:shadow-sm",
+        "transition-all duration-300 ease-in-out",
+        priorityBorderColors[task.priority],
+        task.completed && "bg-gray-50 hover:translate-y-0"
+      )}
+    >
       <div className="flex items-start gap-3">
-        <Checkbox
-          checked={task.completed}
-          onCheckedChange={() => toggleTask(task.id)}
-          className={cn(
-            "mt-1 rounded-full transition-colors",
-            task.completed ? "bg-gray-400 text-white" : "border-gray-300"
-          )}
-        />
+        <div className="flex flex-col items-center gap-2">
+          <Checkbox
+            checked={task.completed}
+            onCheckedChange={() => toggleTask(task.id)}
+            className={cn(
+              "mt-1 rounded-full transition-all duration-300",
+              task.completed ? "bg-gray-400 text-white scale-105" : "border-gray-300 hover:border-violet-500",
+              "focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+            )}
+          />
+          <div className="w-0.5 h-full bg-gray-100 rounded-full" />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <h3 className={cn(
-                "font-medium text-gray-900 truncate",
+                "font-medium text-gray-900 truncate group-hover:text-violet-600",
+                "transition-colors duration-300",
                 task.completed && "line-through text-gray-500"
               )}>
                 {task.title}
@@ -175,7 +199,8 @@ export function TaskCard({ task }: TaskCardProps) {
               {task.description && (
                 <p className={cn(
                   "mt-1 text-sm text-gray-500 line-clamp-2",
-                  task.completed && "line-through"
+                  "transition-opacity duration-300",
+                  task.completed && "line-through opacity-75"
                 )}>
                   {task.description}
                 </p>
@@ -183,8 +208,10 @@ export function TaskCard({ task }: TaskCardProps) {
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {task.dueDate && (
                   <div className={cn(
-                    "flex items-center text-xs text-gray-500",
-                    task.completed && "line-through"
+                    "flex items-center text-xs",
+                    task.dueDate < new Date() && !task.completed ? "text-red-500" : "text-gray-500",
+                    "transition-colors duration-300",
+                    task.completed && "line-through opacity-75"
                   )}>
                     <CalendarIcon className="mr-1 h-3 w-3" />
                     {format(task.dueDate, "MMM d")}
@@ -196,10 +223,11 @@ export function TaskCard({ task }: TaskCardProps) {
                     "text-xs font-medium",
                     priorityColors[task.priority],
                     priorityBgColors[task.priority],
+                    "transition-all duration-300",
                     task.completed && "opacity-50"
                   )}
                 >
-                  {task.priority.toUpperCase()}
+                  {priorityLabels[task.priority]}
                 </Badge>
                 {(task.tags || []).length > 0 && (
                   <div className="flex flex-wrap gap-1">
@@ -208,9 +236,10 @@ export function TaskCard({ task }: TaskCardProps) {
                         key={tag.id}
                         variant="secondary"
                         className={cn(
-                          "text-xs",
+                          "text-xs transition-all duration-300",
                           tag.color.replace("bg-", "text-"),
-                          task.completed && "opacity-50"
+                          task.completed && "opacity-50",
+                          "hover:scale-105"
                         )}
                       >
                         {tag.name}
@@ -225,7 +254,12 @@ export function TaskCard({ task }: TaskCardProps) {
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-8 w-8 rounded-lg hover:bg-gray-100"
+                  className={cn(
+                    "h-8 w-8 rounded-lg",
+                    "opacity-0 group-hover:opacity-100",
+                    "transition-opacity duration-300",
+                    "hover:bg-gray-100"
+                  )}
                 >
                   <DotsHorizontalIcon className="h-4 w-4 text-gray-500" />
                 </Button>
@@ -234,7 +268,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="w-full justify-start text-sm font-normal"
+                  className="w-full justify-start text-sm font-normal hover:text-violet-600 hover:bg-violet-50"
                   onClick={() => setIsEditing(true)}
                 >
                   <Pencil1Icon className="mr-2 h-4 w-4" />

@@ -61,7 +61,15 @@ export function TagPicker({ selectedTags, onTagsChange }: TagPickerProps) {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="h-10 justify-start font-normal">
+        <Button 
+          variant="outline" 
+          className={cn(
+            "h-10 justify-start font-normal",
+            "hover:border-violet-500 hover:bg-violet-50",
+            "transition-all duration-300",
+            "rounded-lg border-gray-200"
+          )}
+        >
           <TextIcon className="mr-2 h-4 w-4" />
           {selectedTags.length > 0 ? (
             <div className="flex flex-wrap gap-1">
@@ -69,31 +77,46 @@ export function TagPicker({ selectedTags, onTagsChange }: TagPickerProps) {
                 <Badge
                   key={tag.id}
                   variant="secondary"
-                  className="rounded-sm px-1 font-normal"
+                  className={cn(
+                    "rounded-sm px-1 font-normal",
+                    "transition-all duration-300",
+                    "hover:scale-105"
+                  )}
                 >
                   {tag.name}
                 </Badge>
               ))}
             </div>
           ) : (
-            "Add tags"
+            <span className="text-gray-400">Add tags</span>
           )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-3" align="start">
         <div className="space-y-4">
           <div className="space-y-2">
-            <h4 className="font-medium leading-none">Add New Tag</h4>
+            <h4 className="font-medium leading-none text-gray-900">Add New Tag</h4>
             <div className="flex gap-2">
               <Input
                 placeholder="Tag name"
                 value={newTagName}
                 onChange={(e) => setNewTagName(e.target.value)}
-                className="h-8"
+                className={cn(
+                  "h-8",
+                  "focus:border-violet-500 focus:ring-violet-500 focus:ring-opacity-25",
+                  "transition-all duration-300",
+                  "rounded-lg border-gray-200"
+                )}
               />
               <Button
                 size="sm"
-                className="h-8 px-2"
+                className={cn(
+                  "h-8 px-2",
+                  "bg-violet-600 hover:bg-violet-700 active:bg-violet-800",
+                  "transition-all duration-300",
+                  "hover:shadow-md",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
                 onClick={handleAddTag}
                 disabled={!newTagName.trim()}
               >
@@ -107,7 +130,9 @@ export function TagPicker({ selectedTags, onTagsChange }: TagPickerProps) {
                   className={cn(
                     "h-6 w-6 rounded-full",
                     color,
-                    selectedColor === color && "ring-2 ring-offset-2"
+                    "transition-all duration-300",
+                    "hover:scale-110 hover:shadow-md",
+                    selectedColor === color && "ring-2 ring-violet-500 ring-offset-2 scale-110"
                   )}
                   onClick={() => setSelectedColor(color)}
                 />
@@ -116,15 +141,17 @@ export function TagPicker({ selectedTags, onTagsChange }: TagPickerProps) {
           </div>
 
           <div className="space-y-2">
-            <h4 className="font-medium leading-none">Available Tags</h4>
-            <div className="flex flex-wrap gap-1">
+            <h4 className="font-medium leading-none text-gray-900">Available Tags</h4>
+            <div className="flex flex-wrap gap-1.5">
               {tags.map((tag) => (
                 <Badge
                   key={tag.id}
                   variant={selectedTags.some((t) => t.id === tag.id) ? "default" : "outline"}
                   className={cn(
-                    "cursor-pointer transition-colors",
-                    selectedTags.some((t) => t.id === tag.id) && tag.color
+                    "cursor-pointer transition-all duration-300",
+                    selectedTags.some((t) => t.id === tag.id) ? tag.color : "hover:border-violet-500",
+                    "hover:scale-105 hover:shadow-sm",
+                    "active:scale-95"
                   )}
                   onClick={() => toggleTag(tag)}
                 >
@@ -132,7 +159,7 @@ export function TagPicker({ selectedTags, onTagsChange }: TagPickerProps) {
                 </Badge>
               ))}
               {tags.length === 0 && (
-                <p className="text-sm text-muted-foreground">No tags created yet</p>
+                <p className="text-sm text-gray-500 italic">No tags created yet</p>
               )}
             </div>
           </div>
