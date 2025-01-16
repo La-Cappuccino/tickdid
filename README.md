@@ -37,6 +37,22 @@ TickDid combines powerful task management with AI-driven insights, all while kee
 - Responsive sidebar with quick navigation
 - Modern card-based task display
 
+### Calendar & Task View
+![TickDid Calendar](docs/screenshots/calendar-view.png)
+*Calendar interface with completed tasks and progress tracking*
+
+**Key Features Shown:**
+- Interactive weekly calendar view
+- Task completion tracking
+- Progress statistics cards
+  - Tasks Due
+  - High Priority tasks
+  - Completed Today
+  - Weekly Progress
+- Clean task list with completion status
+- Priority indicators
+- Responsive layout with collapsible sidebar
+
 ## 🌟 Key Features
 
 - **AI-Enhanced Task Management**
