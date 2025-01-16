@@ -23,6 +23,20 @@ TickDid combines powerful task management with AI-driven insights, all while kee
 - 🔄 Real-time updates
 - 📱 Responsive across all devices
 
+## 📸 Screenshots
+
+### Dashboard Overview
+![TickDid Dashboard](docs/screenshots/dashboard.png)
+*Main dashboard showing task management interface with calendar, task stats, and intuitive navigation*
+
+**Key Features Shown:**
+- Clean, minimalist interface with violet theme
+- Smart task organization and filtering
+- Interactive calendar with task integration
+- Real-time task statistics and progress tracking
+- Responsive sidebar with quick navigation
+- Modern card-based task display
+
 ## 🌟 Key Features
 
 - **AI-Enhanced Task Management**
