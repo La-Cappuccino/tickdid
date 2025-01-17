@@ -10,13 +10,17 @@ import {
   CalendarIcon, 
   ClockIcon, 
   ListBulletIcon,
-  QuestionMarkCircledIcon
+  QuestionMarkCircledIcon,
+  BarChartIcon
 } from "@radix-ui/react-icons"
 import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dialog"
 import { TaskDialog } from "@/components/ui/task-dialog"
 import { MiniCalendar } from "@/components/mini-calendar"
 import { cn } from "@/lib/utils"
 import { isToday, isAfter } from "date-fns"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { AnalyticsDialog } from "@/components/analytics/analytics-dialog"
 
 interface SidebarProps {
   isOpen: boolean
@@ -32,9 +36,11 @@ interface FilterItem {
 
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+  const [analyticsDialogOpen, setAnalyticsDialogOpen] = useState(false)
   const tasks = useTaskStore((state) => state.tasks)
   const selectedView = useTaskStore((state) => state.currentView)
   const setView = useTaskStore((state) => state.setView)
+  const pathname = usePathname()
 
   const filters: FilterItem[] = [
     { 
@@ -163,6 +169,34 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               )}
             </button>
           ))}
+
+          {/* Analytics Link */}
+          <button
+            onClick={() => setAnalyticsDialogOpen(true)}
+            className={cn(
+              "flex items-center gap-3 transition-all duration-300 group hover:shadow-sm active:scale-98",
+              isOpen 
+                ? "w-full px-4 py-2.5 rounded-xl text-sm"
+                : "w-10 h-10 justify-center rounded-xl",
+              "text-gray-600 hover:bg-violet-50 hover:text-violet-600"
+            )}
+            title={!isOpen ? "Analytics" : undefined}
+          >
+            <div className={cn(
+              "flex-shrink-0 transition-colors duration-300",
+              "text-violet-500 group-hover:text-violet-600"
+            )}>
+              <BarChartIcon className="w-5 h-5 stroke-[1.5]" />
+            </div>
+            {isOpen && (
+              <span className="flex-1 text-left font-medium">Analytics</span>
+            )}
+          </button>
+
+          <AnalyticsDialog 
+            open={analyticsDialogOpen}
+            onOpenChange={setAnalyticsDialogOpen}
+          />
         </div>
       </nav>
     </div>
