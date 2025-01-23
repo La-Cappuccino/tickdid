@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Task, Priority, useTaskStore } from "@/lib/store/task-store"
 import { Button } from "@/components/ui/button"
 import {
@@ -89,21 +89,15 @@ export function CalendarView({ tasks }: CalendarViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const updateTask = useTaskStore((state) => state.updateTask)
 
-  // Get days based on view mode
-  const days = (() => {
-    if (viewMode === "week") {
-      const weekStart = startOfWeek(currentDate)
-      const weekEnd = endOfWeek(currentDate)
-      return eachDayOfInterval({ start: weekStart, end: weekEnd })
-    } else {
-      const monthStart = startOfMonth(currentDate)
-      const monthEnd = endOfMonth(currentDate)
-      return eachDayOfInterval({ start: monthStart, end: monthEnd })
-    }
-  })()
+  // Calculate calendar days using useMemo
+  const days = useMemo(() => {
+    const start = viewMode === "week" ? startOfWeek(currentDate) : startOfWeek(startOfMonth(currentDate))
+    const end = viewMode === "week" ? endOfWeek(currentDate) : endOfWeek(endOfMonth(currentDate))
+    return eachDayOfInterval({ start, end })
+  }, [currentDate, viewMode])
 
-  // Get tasks for each day
-  const getTasksForDay = (date: Date) => {
+  // Memoize task filtering function
+  const getTasksForDay = useMemo(() => (date: Date) => {
     return tasks.filter(task => {
       if (!task.dueDate) return false
       const start = startOfDay(new Date(task.dueDate))
@@ -111,32 +105,23 @@ export function CalendarView({ tasks }: CalendarViewProps) {
       const current = startOfDay(date)
       return isWithinInterval(current, { start, end })
     })
+  }, [tasks])
+
+  const handlePreviousPeriod = () => {
+    setCurrentDate(viewMode === "week" ? subWeeks(currentDate, 1) : subMonths(currentDate, 1))
   }
 
-  // Navigation handlers
-  const previousPeriod = () => {
-    if (viewMode === "week") {
-      setCurrentDate(subWeeks(currentDate, 1))
-    } else {
-      setCurrentDate(subMonths(currentDate, 1))
-    }
+  const handleNextPeriod = () => {
+    setCurrentDate(viewMode === "week" ? addWeeks(currentDate, 1) : addMonths(currentDate, 1))
   }
 
-  const nextPeriod = () => {
-    if (viewMode === "week") {
-      setCurrentDate(addWeeks(currentDate, 1))
-    } else {
-      setCurrentDate(addMonths(currentDate, 1))
-    }
-  }
+  const handleToday = () => setCurrentDate(new Date())
 
-  const today = () => setCurrentDate(new Date())
-
-  function handleDragStart(event: DragStartEvent) {
+  const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
   }
 
-  function handleDragEnd(event: DragEndEvent) {
+  const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null)
     const { active, over } = event
     if (!over) return
@@ -153,7 +138,19 @@ export function CalendarView({ tasks }: CalendarViewProps) {
     }
   }
 
-  const activeTask = activeId ? tasks.find(task => task.id === activeId) : null
+  const activeTask = useMemo(() => 
+    activeId ? tasks.find(task => task.id === activeId) : null
+  , [activeId, tasks])
+
+  const weekDays = useMemo(() => [
+    { key: "sun", label: "Sun" },
+    { key: "mon", label: "Mon" },
+    { key: "tue", label: "Tue" },
+    { key: "wed", label: "Wed" },
+    { key: "thu", label: "Thu" },
+    { key: "fri", label: "Fri" },
+    { key: "sat", label: "Sat" }
+  ], [])
 
   return (
     <div className="flex flex-col h-full">
@@ -169,7 +166,7 @@ export function CalendarView({ tasks }: CalendarViewProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={today}
+            onClick={handleToday}
             className={cn(
               "h-8 text-sm",
               "hover:bg-violet-50 hover:text-violet-600 hover:border-violet-500",
@@ -195,7 +192,7 @@ export function CalendarView({ tasks }: CalendarViewProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={previousPeriod}
+            onClick={handlePreviousPeriod}
             className="h-8 w-8 rounded-lg hover:bg-gray-100"
           >
             <ChevronLeftIcon className="h-4 w-4" />
@@ -203,7 +200,7 @@ export function CalendarView({ tasks }: CalendarViewProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={nextPeriod}
+            onClick={handleNextPeriod}
             className="h-8 w-8 rounded-lg hover:bg-gray-100"
           >
             <ChevronRightIcon className="h-4 w-4" />
@@ -218,79 +215,77 @@ export function CalendarView({ tasks }: CalendarViewProps) {
         modifiers={[restrictToWindowEdges]}
       >
         {/* Calendar Grid */}
-        <div className={cn(
-          "grid gap-px bg-gray-200 rounded-lg overflow-hidden flex-1",
-          viewMode === "week" ? "grid-cols-7" : "grid-cols-7"
-        )}>
+        <div className="grid gap-px bg-gray-200 rounded-lg overflow-hidden flex-1">
           {/* Weekday Headers */}
-          {[
-            { key: "sunday", label: "Sun" },
-            { key: "monday", label: "Mon" },
-            { key: "tuesday", label: "Tue" },
-            { key: "wednesday", label: "Wed" },
-            { key: "thursday", label: "Thu" },
-            { key: "friday", label: "Fri" },
-            { key: "saturday", label: "Sat" }
-          ].map((day) => (
-            <div
-              key={day.key}
-              className="bg-gray-50 p-2 text-center text-sm font-medium text-gray-500"
-            >
-              {day.label}
-            </div>
-          ))}
+          <div className="grid grid-cols-7 bg-gray-50">
+            {weekDays.map((day) => (
+              <div
+                key={day.key}
+                className="p-2 text-center text-sm font-medium text-gray-500"
+              >
+                {day.label}
+              </div>
+            ))}
+          </div>
 
           {/* Calendar Days */}
-          {days.map((day, dayIndex) => {
-            const dayTasks = getTasksForDay(day)
-            const isSelected = selectedDate && isSameDay(day, selectedDate)
-            const { isOver, setNodeRef: setDroppableRef } = useDroppable({
-              id: day.toISOString(),
-            })
+          <div className={cn(
+            "grid grid-cols-7 auto-rows-fr bg-gray-200 gap-px flex-1",
+            viewMode === "week" ? "grid-rows-1" : "grid-rows-6"
+          )}>
+            {days.map((day) => {
+              const dayTasks = getTasksForDay(day)
+              const isSelected = selectedDate && isSameDay(day, selectedDate)
+              const droppableId = day.toISOString()
+              const { isOver, setNodeRef: setDroppableRef } = useDroppable({
+                id: droppableId,
+              })
 
-            return (
-              <div
-                ref={setDroppableRef}
-                key={`day-${day.toISOString()}`}
-                className={cn(
-                  "bg-white p-2 min-h-[120px]",
-                  "transition-colors duration-300",
-                  isSelected && "bg-violet-50",
-                  !isSameMonth(day, currentDate) && "opacity-50",
-                  isOver && "bg-violet-100"
-                )}
-                onClick={() => {
-                  setSelectedDate(day)
-                  setTaskDialogOpen(true)
-                }}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className={cn(
-                      "text-sm font-medium",
-                      isToday(day) && "text-violet-600",
-                      isSelected && "text-violet-600"
-                    )}
-                  >
-                    {format(day, "d")}
-                  </span>
-                  {isToday(day) && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-violet-100 text-violet-600 text-xs"
-                    >
-                      Today
-                    </Badge>
+              return (
+                <div
+                  ref={setDroppableRef}
+                  key={`day-${droppableId}`}
+                  className={cn(
+                    "bg-white p-2 min-h-[120px] relative",
+                    "transition-colors duration-300",
+                    isSelected && "bg-violet-50",
+                    !isSameMonth(day, currentDate) && "bg-gray-50",
+                    isOver && "bg-violet-100"
                   )}
+                  onClick={() => {
+                    setSelectedDate(day)
+                    setTaskDialogOpen(true)
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span
+                      className={cn(
+                        "text-sm font-medium",
+                        isToday(day) && "text-violet-600",
+                        isSelected && "text-violet-600",
+                        !isSameMonth(day, currentDate) && "text-gray-400"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </span>
+                    {isToday(day) && (
+                      <Badge
+                        variant="secondary"
+                        className="bg-violet-100 text-violet-600 text-xs"
+                      >
+                        Today
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {dayTasks.map((task) => (
+                      <DraggableTask key={`task-${task.id}`} task={task} day={day} />
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  {dayTasks.map((task) => (
-                    <DraggableTask key={`task-${task.id}`} task={task} day={day} />
-                  ))}
-                </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
 
         <DragOverlay>
@@ -304,7 +299,7 @@ export function CalendarView({ tasks }: CalendarViewProps) {
               )}
             >
               <DragHandleDots2Icon className="w-3 h-3" />
-              <span className="flex-1">{activeTask.title}</span>
+              <span className="flex-1 truncate">{activeTask.title}</span>
             </div>
           )}
         </DragOverlay>
@@ -377,18 +372,20 @@ function DraggableTask({ task, day }: { task: Task; day: Date }) {
           >
             {isStart && (
               <div
+                key={`resize-start-${task.id}`}
                 className="absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-violet-400 rounded-l"
                 onClick={handleResizeEnd('start')}
               />
             )}
             {isEnd && (
               <div
+                key={`resize-end-${task.id}`}
                 className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-violet-400 rounded-r"
                 onClick={handleResizeEnd('end')}
               />
             )}
             <DragHandleDots2Icon className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <span className="flex-1">{task.title}</span>
+            <span className="flex-1 truncate">{task.title}</span>
           </div>
         </TooltipTrigger>
         <TooltipContent side="right" className="max-w-[300px]">
@@ -398,19 +395,29 @@ function DraggableTask({ task, day }: { task: Task; day: Date }) {
               <p className="text-sm text-gray-500">{task.description}</p>
             )}
             <div className="flex items-center gap-2 text-xs">
-              <Badge variant="outline" className={cn(
-                priorityColors[task.priority]?.text,
-                "border-current"
-              )}>
+              <Badge 
+                variant="outline" 
+                className={cn(
+                  priorityColors[task.priority]?.text,
+                  "border-current"
+                )}
+              >
                 {task.priority.toUpperCase()}
               </Badge>
               {task.tags?.map(tag => (
-                <Badge key={tag.id} variant="secondary" className="bg-gray-100">
+                <Badge 
+                  key={`task-tag-${tag.id}`} 
+                  variant="secondary" 
+                  className="bg-gray-100"
+                >
                   {tag.name}
                 </Badge>
               ))}
               {spanDays > 1 && (
-                <Badge variant="outline" className="border-violet-500 text-violet-600">
+                <Badge 
+                  variant="outline" 
+                  className="border-violet-500 text-violet-600"
+                >
                   {spanDays} days
                 </Badge>
               )}
@@ -420,4 +427,4 @@ function DraggableTask({ task, day }: { task: Task; day: Date }) {
       </Tooltip>
     </TooltipProvider>
   )
-} 
+}

@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "./ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { TagPicker } from "@/components/ui/tag-picker"
+import { TimeTracker } from "@/components/ui/time-tracker"
 
 interface TaskCardProps {
   task: Task
@@ -247,6 +248,7 @@ export function TaskCard({ task }: TaskCardProps) {
                     ))}
                   </div>
                 )}
+                <TimeTracker taskId={task.id} />
               </div>
             </div>
             <Popover open={showMenu} onOpenChange={setShowMenu}>

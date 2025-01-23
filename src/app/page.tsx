@@ -1,12 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTaskStore, type Task, type TaskView } from "@/lib/store/task-store"
-import { TaskDialog } from "@/components/ui/task-dialog"
 import { TaskCard } from "@/components/task-card"
 import { Button } from "@/components/ui/button"
 import {
-  HamburgerMenuIcon,
   MagnifyingGlassIcon,
   BellIcon,
   LayoutIcon,
@@ -14,41 +12,47 @@ import {
   ArrowUpIcon,
   CheckCircledIcon,
   TargetIcon,
-  PlusIcon,
 } from "@radix-ui/react-icons"
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
-import { KeyboardShortcutsDialog } from "@/components/ui/keyboard-shortcuts-dialog"
-import { isToday, isAfter, format, eachDayOfInterval, startOfMonth, endOfMonth, isSameDay, isSameMonth } from "date-fns"
+import { isToday, isAfter } from "date-fns"
 import { cn } from "@/lib/utils"
 import { TagFilter } from "@/components/ui/tag-filter"
 import { CalendarView } from "@/components/calendar-view"
-
-interface FilterItem {
-  id: TaskView;
-  name: string;
-  count: number;
-}
+import { Sidebar } from "@/components/sidebar"
+import { ProjectOverview } from "@/components/project-overview"
 
 export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [taskDialogOpen, setTaskDialogOpen] = useState(false)
-  const [selectedView, setSelectedView] = useState<TaskView>("all")
+  const [currentLayout, setCurrentLayout] = useState<"list" | "calendar" | "overview">("overview")
   const tasks = useTaskStore((state) => state.tasks)
+  const selectedView = useTaskStore((state) => state.currentView)
   const selectedTags = useTaskStore((state) => state.selectedTags)
-  const [currentLayout, setCurrentLayout] = useState<"list" | "calendar">("list")
 
-  // Add keyboard shortcuts
-  useKeyboardShortcuts({
-    onNewTask: () => setTaskDialogOpen(true),
-    onToggleSidebar: () => setSidebarOpen(!sidebarOpen),
-  })
+  // Handle keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      // Don't handle shortcuts if we're in an input field or if a dialog is open
+      if (
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement ||
+        document.activeElement instanceof HTMLButtonElement ||
+        document.querySelector('[role="dialog"]')
+      ) {
+        return
+      }
 
-  const filters: FilterItem[] = [
-    { id: "all", name: "All Tasks", count: tasks.filter(t => !t.completed).length },
-    { id: "today", name: "Today", count: tasks.filter(t => !t.completed && t.dueDate && isToday(t.dueDate)).length },
-    { id: "upcoming", name: "Upcoming", count: tasks.filter(t => !t.completed && t.dueDate && isAfter(t.dueDate, new Date())).length },
-    { id: "completed", name: "Completed", count: tasks.filter(t => t.completed).length },
-  ]
+      // Toggle sidebar with Command/Ctrl + B
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+        event.preventDefault()
+        event.stopPropagation()
+        setSidebarOpen(!sidebarOpen)
+        return
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown, { capture: true })
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true })
+  }, [sidebarOpen])
 
   const filteredTasks = tasks.filter(task => {
     // First filter by view
@@ -99,111 +103,16 @@ export default function Home() {
     }
   ]
 
+  const filters = [
+    { id: "all", name: "All Tasks" },
+    { id: "today", name: "Today" },
+    { id: "upcoming", name: "Upcoming" },
+    { id: "completed", name: "Completed" },
+  ]
+
   return (
     <div className="h-screen flex bg-[#FAFAFA]">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? "w-72" : "w-16"} bg-white border-r border-gray-200 transition-all duration-300 ease-in-out flex flex-col`}>
-        {/* Sidebar Header */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-          >
-            <HamburgerMenuIcon className="w-5 h-5 text-gray-600" />
-          </button>
-          <div className={`flex items-center gap-2 transition-opacity duration-300 ${sidebarOpen ? 'opacity-100' : 'opacity-0 w-0 overflow-hidden'}`}>
-            <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center">
-              <span className="text-sm font-medium text-violet-600">TD</span>
-            </div>
-            <KeyboardShortcutsDialog />
-          </div>
-        </div>
-
-        {/* Quick Add */}
-        <div className={`p-4 ${!sidebarOpen && "flex justify-center"}`}>
-          {sidebarOpen ? (
-            <TaskDialog open={taskDialogOpen} onOpenChange={setTaskDialogOpen} />
-          ) : (
-            <Button
-              size="icon"
-              className="rounded-xl w-8 h-8 p-0"
-              onClick={() => setTaskDialogOpen(true)}
-            >
-              <PlusIcon className="w-4 h-4" />
-            </Button>
-          )}
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-2">
-          {/* Mini Calendar */}
-          <div className={cn(
-            "mb-4 transition-all duration-300",
-            !sidebarOpen && "hidden"
-          )}>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <div className="text-sm font-medium text-gray-600 mb-2">
-                {format(new Date(), "MMMM yyyy")}
-              </div>
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {["S", "M", "T", "W", "T", "F", "S"].map((day) => (
-                  <div key={day} className="text-xs text-gray-400">
-                    {day}
-                  </div>
-                ))}
-                {eachDayOfInterval({
-                  start: startOfMonth(new Date()),
-                  end: endOfMonth(new Date())
-                }).map((day) => {
-                  const hasTask = tasks.some(
-                    task => task.dueDate && isSameDay(new Date(task.dueDate), day)
-                  )
-                  return (
-                    <div
-                      key={day.toISOString()}
-                      className={cn(
-                        "text-xs aspect-square flex items-center justify-center rounded",
-                        isToday(day) && "bg-violet-100 text-violet-600 font-medium",
-                        hasTask && !isToday(day) && "bg-violet-50 text-violet-600",
-                        !isSameMonth(day, new Date()) && "text-gray-300"
-                      )}
-                    >
-                      {format(day, "d")}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-
-          {filters.map((filter) => (
-            <button
-              key={filter.id}
-              onClick={() => setSelectedView(filter.id)}
-              className={cn(
-                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm",
-                "transition-colors duration-300",
-                selectedView === filter.id
-                  ? "bg-violet-50 text-violet-600"
-                  : "text-gray-600 hover:bg-gray-50"
-              )}
-            >
-              {sidebarOpen ? (
-                <>
-                  <span className="flex-1 text-left">{filter.name}</span>
-                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white">
-                    {filter.count}
-                  </span>
-                </>
-              ) : (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white">
-                  {filter.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-      </div>
+      <Sidebar isOpen={sidebarOpen} onToggle={() => setSidebarOpen(!sidebarOpen)} />
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex flex-col">
@@ -227,7 +136,10 @@ export default function Home() {
                 "transition-colors duration-300",
                 currentLayout === "calendar" && "text-violet-600 bg-violet-50 hover:bg-violet-100"
               )}
-              onClick={() => setCurrentLayout(currentLayout === "list" ? "calendar" : "list")}
+              onClick={() => setCurrentLayout(
+                currentLayout === "list" ? "calendar" : 
+                currentLayout === "calendar" ? "overview" : "list"
+              )}
             >
               <LayoutIcon className="h-4 w-4" />
             </Button>
@@ -248,13 +160,17 @@ export default function Home() {
           </div>
         </header>
 
-        {currentLayout === "list" ? (
+        {currentLayout === "overview" ? (
+          <div className="flex-1 overflow-y-auto">
+            <ProjectOverview />
+          </div>
+        ) : currentLayout === "list" ? (
           <>
             {/* Stats Tiles */}
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {stats.map((stat, index) => (
                 <div
-                  key={index}
+                  key={`stat-${index}`}
                   className={cn(
                     "bg-gradient-to-br rounded-xl p-4 text-white shadow-sm",
                     "hover:shadow-md hover:-translate-y-0.5",
@@ -284,7 +200,7 @@ export default function Home() {
                 <TagFilter />
                 <div className="space-y-4">
                   {filteredTasks.map((task) => (
-                    <TaskCard key={task.id} task={task} />
+                    <TaskCard key={`task-${task.id}`} task={task} />
                   ))}
                   {filteredTasks.length === 0 && (
                     <div className="text-center py-12">

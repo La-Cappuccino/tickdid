@@ -81,38 +81,54 @@ export function TaskDialog({ open, onOpenChange, defaultDate }: TaskDialogProps)
       // Save with Command/Ctrl + Enter
       if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
         event.preventDefault()
+        event.stopPropagation()
         if (title.trim()) {
           handleSubmit(event as any)
         }
+        return
       }
 
       // Close with Escape
       if (event.key === "Escape") {
         event.preventDefault()
+        event.stopPropagation()
         onOpenChange(false)
+        return
+      }
+
+      // Only handle shortcuts if no input/textarea is focused
+      if (
+        document.activeElement instanceof HTMLInputElement ||
+        document.activeElement instanceof HTMLTextAreaElement
+      ) {
+        return
       }
 
       // Focus title input with Command/Ctrl + T
-      if ((event.metaKey || event.ctrlKey) && event.key === "t") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "t") {
         event.preventDefault()
+        event.stopPropagation()
         const titleInput = document.querySelector('input[placeholder="What needs to be done?"]')
         if (titleInput instanceof HTMLInputElement) {
           titleInput.focus()
         }
+        return
       }
 
       // Focus description with Command/Ctrl + D
-      if ((event.metaKey || event.ctrlKey) && event.key === "d") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "d") {
         event.preventDefault()
+        event.stopPropagation()
         const descInput = document.querySelector('textarea[placeholder="Add more details about this task..."]')
         if (descInput instanceof HTMLTextAreaElement) {
           descInput.focus()
         }
+        return
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    window.addEventListener("keydown", handleKeyDown, { capture: true })
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true })
   }, [open, title, onOpenChange, handleSubmit])
 
   return (
@@ -136,13 +152,17 @@ export function TaskDialog({ open, onOpenChange, defaultDate }: TaskDialogProps)
         <form onSubmit={handleSubmit}>
           <DialogHeader className="px-6 py-4 border-b border-gray-100">
             <DialogTitle className="text-xl font-semibold text-gray-900">New TickDid Task</DialogTitle>
-            <DialogDescription className="text-sm text-gray-500 mt-1">
-              Add a new task to your list. Fill in the details and click save when you're done.
-              <div className="mt-2 text-xs space-x-4">
-                <span>⌘+Enter to save</span>
-                <span>⌘+T to focus title</span>
-                <span>⌘+D to focus description</span>
-                <span>Esc to cancel</span>
+            <DialogDescription asChild>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500 mt-1">
+                  Add a new task to your list. Fill in the details and click save when you're done.
+                </p>
+                <div className="text-xs space-x-4 text-gray-500">
+                  <span>⌘+Enter to save</span>
+                  <span>⌘+T to focus title</span>
+                  <span>⌘+D to focus description</span>
+                  <span>Esc to cancel</span>
+                </div>
               </div>
             </DialogDescription>
           </DialogHeader>
